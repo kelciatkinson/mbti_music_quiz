@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>app &#8212; Music Quiz API 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+    <script src="../_static/documentation_options.js?v=2709fde1"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for app</h1><div class="highlight"><pre>
+<span></span><span class="c1"># User authentication</span>
+<span class="c1"># MBTI quiz flow</span>
+<span class="c1"># Calculating personality results</span>
+<span class="c1"># Serving these through RESTful API endpoints</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">jsonify</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">mysql.connector</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mysql.connector</span><span class="w"> </span><span class="kn">import</span> <span class="n">Error</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="c1"># logging</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s1">&#39;logs&#39;</span><span class="p">):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="s1">&#39;logs&#39;</span><span class="p">)</span>
+
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
+    <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(name)s</span><span class="s1"> - </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">,</span>
+    <span class="n">handlers</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="s1">&#39;logs/app.log&#39;</span><span class="p">),</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">()</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+<div class="viewcode-block" id="logger">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.logger">[docs]</a>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span></div>
+
+
+<span class="c1"># database setup</span>
+<div class="viewcode-block" id="DB_CONFIG">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.DB_CONFIG">[docs]</a>
+<span class="n">DB_CONFIG</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;host&#39;</span><span class="p">:</span> <span class="s1">&#39;localhost&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;user&#39;</span><span class="p">:</span> <span class="s1">&#39;root&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;password&#39;</span><span class="p">:</span> <span class="s1">&#39;root&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;database&#39;</span><span class="p">:</span> <span class="s1">&#39;music_quiz&#39;</span>
+<span class="p">}</span></div>
+
+
+<span class="c1"># Initializes Flask app</span>
+<div class="viewcode-block" id="app">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.app">[docs]</a>
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_db_connection">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.get_db_connection">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_db_connection</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates a connection to the MySQL database.</span>
+<span class="sd">    </span>
+<span class="sd">    :return: MySQL database connection</span>
+<span class="sd">    :rtype: mysql.connector.connection.MySQLConnection</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">mysql</span><span class="o">.</span><span class="n">connector</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="o">**</span><span class="n">DB_CONFIG</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">conn</span>
+    <span class="k">except</span> <span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Database connection error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span></div>
+
+
+<div class="viewcode-block" id="generate_mbti_playlist">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.generate_mbti_playlist">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_mbti_playlist</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">mbti_type</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates a 10-song playist based on MBTI type with proportional distribution:</span>
+<span class="sd">    - 5 songs from primary genre (affinity=3)</span>
+<span class="sd">    - 3 songs from secondary genre (affinity=2)</span>
+<span class="sd">    - 2 songs from tertiary genre (affinity=1)</span>
+<span class="sd">    </span>
+<span class="sd">    :param cursor: Database cursor</span>
+<span class="sd">    :param mbti_type: Four-letter MBTI type (e.g., &quot;INFJ&quot;)</span>
+<span class="sd">    :return: List of song dictionaries</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Gets the three genres associated with this MBTI type</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        SELECT genre, affinity_score</span>
+<span class="sd">        FROM mbti_genre_affinities</span>
+<span class="sd">        WHERE mbti_type = %s</span>
+<span class="sd">        ORDER BY affinity_score DESC</span>
+<span class="sd">        &quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="p">(</span><span class="n">mbti_type</span><span class="p">,)</span>
+    <span class="p">)</span>
+    <span class="n">genres</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">genres</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not enough genres defined for MBTI type </span><span class="si">{</span><span class="n">mbti_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="n">primary_genre</span> <span class="o">=</span> <span class="n">genres</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;genre&#39;</span><span class="p">]</span>
+    <span class="n">secondary_genre</span> <span class="o">=</span> <span class="n">genres</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;genre&#39;</span><span class="p">]</span>
+    <span class="n">tertiary_genre</span> <span class="o">=</span> <span class="n">genres</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;genre&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># Gets songs from each genre</span>
+    <span class="n">songs</span> <span class="o">=</span> <span class="p">[]</span>
+    
+    <span class="c1"># Gets primary genre songs (5)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        SELECT s.id, s.title, a.name as artist, s.genre</span>
+<span class="sd">        FROM song s</span>
+<span class="sd">        JOIN artist a ON s.artist_id = a.id</span>
+<span class="sd">        WHERE s.genre = %s</span>
+<span class="sd">        ORDER BY RAND()</span>
+<span class="sd">        LIMIT 5</span>
+<span class="sd">        &quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="p">(</span><span class="n">primary_genre</span><span class="p">,)</span>
+    <span class="p">)</span>
+    <span class="n">primary_songs</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    
+    <span class="c1"># Gets genre songs (3)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        SELECT s.id, s.title, a.name as artist, s.genre</span>
+<span class="sd">        FROM song s</span>
+<span class="sd">        JOIN artist a ON s.artist_id = a.id</span>
+<span class="sd">        WHERE s.genre = %s</span>
+<span class="sd">        ORDER BY RAND()</span>
+<span class="sd">        LIMIT 3</span>
+<span class="sd">        &quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="p">(</span><span class="n">secondary_genre</span><span class="p">,)</span>
+    <span class="p">)</span>
+    <span class="n">secondary_songs</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    
+    <span class="c1"># Gets genre songs (2)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        SELECT s.id, s.title, a.name as artist, s.genre</span>
+<span class="sd">        FROM song s</span>
+<span class="sd">        JOIN artist a ON s.artist_id = a.id</span>
+<span class="sd">        WHERE s.genre = %s</span>
+<span class="sd">        ORDER BY RAND()</span>
+<span class="sd">        LIMIT 2</span>
+<span class="sd">        &quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="p">(</span><span class="n">tertiary_genre</span><span class="p">,)</span>
+    <span class="p">)</span>
+    <span class="n">tertiary_songs</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    
+    <span class="c1"># Combine all songs and add match reasons</span>
+    <span class="k">for</span> <span class="n">song</span> <span class="ow">in</span> <span class="n">primary_songs</span><span class="p">:</span>
+        <span class="n">song</span><span class="p">[</span><span class="s1">&#39;match_reason&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Your primary genre match: </span><span class="si">{</span><span class="n">primary_genre</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">songs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">song</span><span class="p">)</span>
+        
+    <span class="k">for</span> <span class="n">song</span> <span class="ow">in</span> <span class="n">secondary_songs</span><span class="p">:</span>
+        <span class="n">song</span><span class="p">[</span><span class="s1">&#39;match_reason&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Your secondary genre match: </span><span class="si">{</span><span class="n">secondary_genre</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">songs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">song</span><span class="p">)</span>
+        
+    <span class="k">for</span> <span class="n">song</span> <span class="ow">in</span> <span class="n">tertiary_songs</span><span class="p">:</span>
+        <span class="n">song</span><span class="p">[</span><span class="s1">&#39;match_reason&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Your tertiary genre match: </span><span class="si">{</span><span class="n">tertiary_genre</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">songs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">song</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">songs</span></div>
+
+
+<span class="c1"># API Routes</span>
+
+<span class="c1"># nshows quiz_id started_at total_questions</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/quiz/start&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="start_quiz">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.start_quiz">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">start_quiz</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Start a new quiz session.</span>
+<span class="sd">    </span>
+<span class="sd">    This endpoint returns info about the available questions.</span>
+<span class="sd">    </span>
+<span class="sd">    :return: JSON with quiz details</span>
+<span class="sd">    :rtype: flask.Response</span>
+<span class="sd">    </span>
+<span class="sd">    :statuscode 201: Quiz info retrieved</span>
+<span class="sd">    :statuscode 500: Server error</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Starting new quiz&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">get_db_connection</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">(</span><span class="n">dictionary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># Gets question count</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT COUNT(*) as count FROM questions&quot;</span><span class="p">)</span>
+        <span class="n">total_questions</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="s1">&#39;count&#39;</span><span class="p">]</span>
+        
+        <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="c1"># Generates a unique ID</span>
+        <span class="n">frontend_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+        
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Quiz info retrieved: </span><span class="si">{</span><span class="n">total_questions</span><span class="si">}</span><span class="s2"> questions&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+            <span class="c1"># Just for the frontend to track the quiz!</span>
+            <span class="s2">&quot;quiz_id&quot;</span><span class="p">:</span> <span class="n">frontend_id</span><span class="p">,</span>
+            <span class="s2">&quot;total_questions&quot;</span><span class="p">:</span> <span class="n">total_questions</span><span class="p">,</span>
+            <span class="s2">&quot;started_at&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+        <span class="p">}),</span> <span class="mi">201</span>
+        
+    <span class="k">except</span> <span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error getting quiz info: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Failed to get quiz info&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}),</span> <span class="mi">500</span></div>
+
+
+<span class="c1"># not working - The requested URL was not found on the server. </span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/quiz/questions/&lt;int:question_number&gt;&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="get_question">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.get_question">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_question</span><span class="p">(</span><span class="n">question_number</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get a specific question by its order number.</span>
+<span class="sd">    </span>
+<span class="sd">    :param question_number: The question order number (1-based)</span>
+<span class="sd">    :type question_number: int</span>
+<span class="sd">    :return: JSON with question detais and answer options</span>
+<span class="sd">    :rtype: flask.Response</span>
+<span class="sd">    </span>
+<span class="sd">    :statuscode 200: Question retrieved successfully</span>
+<span class="sd">    :statuscode 404: Question not found</span>
+<span class="sd">    :statuscode 500: Server error</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Getting question number: </span><span class="si">{</span><span class="n">question_number</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">get_db_connection</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">(</span><span class="n">dictionary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># Gets question by order</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            SELECT id, question_text, question_order</span>
+<span class="sd">            FROM questions</span>
+<span class="sd">            WHERE question_order = %s</span>
+<span class="sd">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question_number</span><span class="p">,)</span>
+        <span class="p">)</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">question</span><span class="p">:</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Question number </span><span class="si">{</span><span class="n">question_number</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">}),</span> <span class="mi">404</span>
+        
+        <span class="c1"># Get options for this question</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            SELECT id, option_text</span>
+<span class="sd">            FROM answers</span>
+<span class="sd">            WHERE question_id = %s</span>
+<span class="sd">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],)</span>
+        <span class="p">)</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;option_text&#39;</span><span class="p">]}</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+        
+        <span class="c1"># Gets total question counts</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT COUNT(*) as count FROM questions&quot;</span><span class="p">)</span>
+        <span class="n">total_questions</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="s1">&#39;count&#39;</span><span class="p">]</span>
+        
+        <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Returning question </span><span class="si">{</span><span class="n">question</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (number </span><span class="si">{</span><span class="n">question_number</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+            <span class="s2">&quot;question_id&quot;</span><span class="p">:</span> <span class="n">question</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span>
+            <span class="s2">&quot;question_text&quot;</span><span class="p">:</span> <span class="n">question</span><span class="p">[</span><span class="s1">&#39;question_text&#39;</span><span class="p">],</span>
+            <span class="s2">&quot;options&quot;</span><span class="p">:</span> <span class="n">options</span><span class="p">,</span>
+            <span class="s2">&quot;question_number&quot;</span><span class="p">:</span> <span class="n">question_number</span><span class="p">,</span>
+            <span class="s2">&quot;total_questions&quot;</span><span class="p">:</span> <span class="n">total_questions</span>
+        <span class="p">}),</span> <span class="mi">200</span>
+        
+    <span class="k">except</span> <span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error fetching question: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Failed to fetch question&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}),</span> <span class="mi">500</span></div>
+
+
+<span class="c1"># unsupported Media Type</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/quiz/process-answers&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="process_answers">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.process_answers">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_answers</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Process all answers at once and get personality results and music recommendations.</span>
+<span class="sd">    </span>
+<span class="sd">    This endpoint takes an array of answers, calculates the MBTI personality type,</span>
+<span class="sd">    and generates personalized music recommendations based on the results.</span>
+<span class="sd">    </span>
+<span class="sd">    :return: JSON with personality profile and music recommendations</span>
+<span class="sd">    :rtype: flask.Response</span>
+<span class="sd">    </span>
+<span class="sd">    :statuscode 200: Answers processed successfully with results</span>
+<span class="sd">    :statuscode 400: Invalid request format</span>
+<span class="sd">    :statuscode 500: Server error</span>
+<span class="sd">    </span>
+<span class="sd">    **Example request**:</span>
+<span class="sd">    </span>
+<span class="sd">    .. sourcecode:: http</span>
+<span class="sd">    </span>
+<span class="sd">       POST /api/quiz/process-answers HTTP/1.1</span>
+<span class="sd">       Host: example.com</span>
+<span class="sd">       Accept: application/json</span>
+<span class="sd">       Content-Type: application/json</span>
+<span class="sd">       </span>
+<span class="sd">       {</span>
+<span class="sd">         &quot;answers&quot;: [</span>
+<span class="sd">           {&quot;question_id&quot;: 1, &quot;selected_option_id&quot;: 2},</span>
+<span class="sd">           {&quot;question_id&quot;: 2, &quot;selected_option_id&quot;: 4},</span>
+<span class="sd">           ...</span>
+<span class="sd">         ]</span>
+<span class="sd">       }</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Processing quiz answers&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">json</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span> <span class="ow">or</span> <span class="s1">&#39;answers&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;answers&#39;</span><span class="p">],</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid request. Missing answers array&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+        
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">get_db_connection</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">(</span><span class="n">dictionary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># Extract the option IDs</span>
+        <span class="n">option_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">answer</span><span class="p">[</span><span class="s1">&#39;selected_option_id&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">answer</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;answers&#39;</span><span class="p">]</span> 
+                      <span class="k">if</span> <span class="s1">&#39;selected_option_id&#39;</span> <span class="ow">in</span> <span class="n">answer</span><span class="p">]</span>
+        
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">option_ids</span><span class="p">:</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;No valid answer options provided&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+        
+        <span class="c1"># Gets trait impacts for the selected options</span>
+        <span class="n">format_strings</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">option_ids</span><span class="p">))</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT trait_name, SUM(score_impact) as total_score</span>
+<span class="s2">            FROM answers</span>
+<span class="s2">            WHERE id IN (</span><span class="si">{</span><span class="n">format_strings</span><span class="si">}</span><span class="s2">)</span>
+<span class="s2">            GROUP BY trait_name</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="nb">tuple</span><span class="p">(</span><span class="n">option_ids</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">trait_scores</span> <span class="o">=</span> <span class="p">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;trait_name&#39;</span><span class="p">]:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;total_score&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()}</span>
+        
+        <span class="c1"># Calculates MBTI personality type</span>
+        <span class="n">e_score</span> <span class="o">=</span> <span class="n">trait_scores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">i_score</span> <span class="o">=</span> <span class="n">trait_scores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;I&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">s_score</span> <span class="o">=</span> <span class="n">trait_scores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;S&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">n_score</span> <span class="o">=</span> <span class="n">trait_scores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">t_score</span> <span class="o">=</span> <span class="n">trait_scores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">f_score</span> <span class="o">=</span> <span class="n">trait_scores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;F&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">j_score</span> <span class="o">=</span> <span class="n">trait_scores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;J&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">p_score</span> <span class="o">=</span> <span class="n">trait_scores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;P&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        
+        <span class="c1"># Determines each dimension</span>
+        <span class="n">ei_dimension</span> <span class="o">=</span> <span class="s1">&#39;I&#39;</span> <span class="k">if</span> <span class="n">i_score</span> <span class="o">&gt;</span> <span class="n">e_score</span> <span class="k">else</span> <span class="s1">&#39;E&#39;</span>
+        <span class="n">sn_dimension</span> <span class="o">=</span> <span class="s1">&#39;N&#39;</span> <span class="k">if</span> <span class="n">n_score</span> <span class="o">&gt;</span> <span class="n">s_score</span> <span class="k">else</span> <span class="s1">&#39;S&#39;</span>
+        <span class="n">tf_dimension</span> <span class="o">=</span> <span class="s1">&#39;F&#39;</span> <span class="k">if</span> <span class="n">f_score</span> <span class="o">&gt;</span> <span class="n">t_score</span> <span class="k">else</span> <span class="s1">&#39;T&#39;</span>
+        <span class="n">jp_dimension</span> <span class="o">=</span> <span class="s1">&#39;J&#39;</span> <span class="k">if</span> <span class="n">j_score</span> <span class="o">&gt;</span> <span class="n">p_score</span> <span class="k">else</span> <span class="s1">&#39;P&#39;</span>
+        
+        <span class="c1"># Combine into MBTI type</span>
+        <span class="n">mbti_type</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ei_dimension</span><span class="si">}{</span><span class="n">sn_dimension</span><span class="si">}{</span><span class="n">tf_dimension</span><span class="si">}{</span><span class="n">jp_dimension</span><span class="si">}</span><span class="s2">&quot;</span>
+        
+        <span class="c1"># Generates playlist with function that distributes songs by genre</span>
+        <span class="n">recommended_songs</span> <span class="o">=</span> <span class="n">generate_mbti_playlist</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">mbti_type</span><span class="p">)</span>
+        
+        <span class="c1"># Creatse playlist entry</span>
+        <span class="n">playlist_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+        <span class="n">playlist_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mbti_type</span><span class="si">}</span><span class="s2"> Music Mix&quot;</span>
+        <span class="n">playlist_description</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Music recommendations based on your </span><span class="si">{</span><span class="n">mbti_type</span><span class="si">}</span><span class="s2"> personality type&quot;</span>
+        
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            INSERT INTO playlist (id, mbti_type, name, description)</span>
+<span class="sd">            VALUES (%s, %s, %s, %s)</span>
+<span class="sd">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">playlist_id</span><span class="p">,</span> <span class="n">mbti_type</span><span class="p">,</span> <span class="n">playlist_name</span><span class="p">,</span> <span class="n">playlist_description</span><span class="p">)</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Adds songs to the playlist</span>
+        <span class="k">for</span> <span class="n">position</span><span class="p">,</span> <span class="n">song</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">recommended_songs</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                INSERT INTO playlist_songs (playlist_id, song_id)</span>
+<span class="sd">                VALUES (%s, %s)</span>
+<span class="sd">                &quot;&quot;&quot;</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">playlist_id</span><span class="p">,</span> <span class="n">song</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">])</span>
+            <span class="p">)</span>
+        
+        <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        
+        <span class="c1"># Formats the result for a response</span>
+        <span class="n">personality_profile</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;mbti_type&quot;</span><span class="p">:</span> <span class="n">mbti_type</span><span class="p">,</span>
+            <span class="s2">&quot;dimensions&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Introversion-Extraversion&quot;</span><span class="p">,</span> <span class="s2">&quot;letter&quot;</span><span class="p">:</span> <span class="n">ei_dimension</span><span class="p">,</span> 
+                 <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="nb">abs</span><span class="p">(</span><span class="n">i_score</span> <span class="o">-</span> <span class="n">e_score</span><span class="p">)},</span>
+                <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Intuition-Sensing&quot;</span><span class="p">,</span> <span class="s2">&quot;letter&quot;</span><span class="p">:</span> <span class="n">sn_dimension</span><span class="p">,</span> 
+                 <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="nb">abs</span><span class="p">(</span><span class="n">n_score</span> <span class="o">-</span> <span class="n">s_score</span><span class="p">)},</span>
+                <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Feeling-Thinking&quot;</span><span class="p">,</span> <span class="s2">&quot;letter&quot;</span><span class="p">:</span> <span class="n">tf_dimension</span><span class="p">,</span> 
+                 <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="nb">abs</span><span class="p">(</span><span class="n">f_score</span> <span class="o">-</span> <span class="n">t_score</span><span class="p">)},</span>
+                <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Judging-Perceiving&quot;</span><span class="p">,</span> <span class="s2">&quot;letter&quot;</span><span class="p">:</span> <span class="n">jp_dimension</span><span class="p">,</span> 
+                 <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="nb">abs</span><span class="p">(</span><span class="n">j_score</span> <span class="o">-</span> <span class="n">p_score</span><span class="p">)}</span>
+            <span class="p">]</span>
+        <span class="p">}</span>
+        
+        <span class="c1"># Formats songs for response</span>
+        <span class="n">recommended_tracks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">song</span> <span class="ow">in</span> <span class="n">recommended_songs</span><span class="p">:</span>
+            <span class="n">recommended_tracks</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">song</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">song</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;artist&quot;</span><span class="p">:</span> <span class="n">song</span><span class="p">[</span><span class="s1">&#39;artist&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;genre&quot;</span><span class="p">:</span> <span class="n">song</span><span class="p">[</span><span class="s1">&#39;genre&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;match_reason&quot;</span><span class="p">:</span> <span class="n">song</span><span class="p">[</span><span class="s1">&#39;match_reason&#39;</span><span class="p">]</span>
+            <span class="p">})</span>
+        
+        <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Quiz processed with MBTI type </span><span class="si">{</span><span class="n">mbti_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+            <span class="s2">&quot;personality_profile&quot;</span><span class="p">:</span> <span class="n">personality_profile</span><span class="p">,</span>
+            <span class="s2">&quot;playlist&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">playlist_id</span><span class="p">,</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">playlist_name</span><span class="p">,</span>
+                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">playlist_description</span><span class="p">,</span>
+                <span class="s2">&quot;tracks&quot;</span><span class="p">:</span> <span class="n">recommended_tracks</span>
+            <span class="p">}</span>
+        <span class="p">}),</span> <span class="mi">200</span>
+        
+    <span class="k">except</span> <span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error processing answers: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Failed to process answers&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}),</span> <span class="mi">500</span></div>
+
+
+<span class="c1"># playlist not found</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/playlists/&lt;string:playlist_id&gt;&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="get_playlist">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.get_playlist">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_playlist</span><span class="p">(</span><span class="n">playlist_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get a specific playlist with its songs.</span>
+<span class="sd">    </span>
+<span class="sd">    This endpoint retrieves the details of a specific playlist.</span>
+<span class="sd">    </span>
+<span class="sd">    :param playlist_id: The ID of the playlist</span>
+<span class="sd">    :type playlist_id: str</span>
+<span class="sd">    :return: JSON with playlist details and tracks</span>
+<span class="sd">    :rtype: flask.Response</span>
+<span class="sd">    </span>
+<span class="sd">    :statuscode 200: Playlist retrieved successfully</span>
+<span class="sd">    :statuscode 404: Playlist not found</span>
+<span class="sd">    :statuscode 500: Server error</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Getting playlist: </span><span class="si">{</span><span class="n">playlist_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">get_db_connection</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">(</span><span class="n">dictionary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># Checks if playist exists</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            SELECT * FROM playlist WHERE id = %s</span>
+<span class="sd">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">playlist_id</span><span class="p">,)</span>
+        <span class="p">)</span>
+        <span class="n">playlist</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">playlist</span><span class="p">:</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Playlist not found&quot;</span><span class="p">}),</span> <span class="mi">404</span>
+        
+        <span class="c1"># Get songs in playlist</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            SELECT ps.*, s.title, a.name as artist, s.genre</span>
+<span class="sd">            FROM playlist_songs ps</span>
+<span class="sd">            JOIN song s ON ps.song_id = s.id</span>
+<span class="sd">            JOIN artist a ON s.artist_id = a.id</span>
+<span class="sd">            WHERE ps.playlist_id = %s</span>
+<span class="sd">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">playlist_id</span><span class="p">,)</span>
+        <span class="p">)</span>
+        <span class="n">songs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">():</span>
+            <span class="n">song_genre</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;genre&#39;</span><span class="p">]</span>
+            <span class="c1"># Shows match reason based on genre and MBTI type</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                SELECT affinity_score FROM mbti_genre_affinities </span>
+<span class="sd">                WHERE mbti_type = %s AND genre = %s</span>
+<span class="sd">                &quot;&quot;&quot;</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">playlist</span><span class="p">[</span><span class="s1">&#39;mbti_type&#39;</span><span class="p">],</span> <span class="n">song_genre</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">affinity</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">affinity</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">affinity</span><span class="p">[</span><span class="s1">&#39;affinity_score&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="n">match_reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Your primary genre match: </span><span class="si">{</span><span class="n">song_genre</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="k">elif</span> <span class="n">affinity</span><span class="p">[</span><span class="s1">&#39;affinity_score&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">match_reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Your secondary genre match: </span><span class="si">{</span><span class="n">song_genre</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">match_reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Your tertiary genre match: </span><span class="si">{</span><span class="n">song_genre</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">match_reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Matches your </span><span class="si">{</span><span class="n">playlist</span><span class="p">[</span><span class="s1">&#39;mbti_type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> music preferences&quot;</span>
+            
+            <span class="n">songs</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;song_id&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;artist&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;artist&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;genre&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;genre&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;match_reason&quot;</span><span class="p">:</span> <span class="n">match_reason</span>
+            <span class="p">})</span>
+        
+        <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">playlist</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">],</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">playlist</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">playlist</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">],</span>
+            <span class="s2">&quot;mbti_type&quot;</span><span class="p">:</span> <span class="n">playlist</span><span class="p">[</span><span class="s1">&#39;mbti_type&#39;</span><span class="p">],</span>
+            <span class="s2">&quot;tracks&quot;</span><span class="p">:</span> <span class="n">songs</span>
+        <span class="p">}),</span> <span class="mi">200</span>
+        
+    <span class="k">except</span> <span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error fetching playlist: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Failed to fetch playlist&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}),</span> <span class="mi">500</span></div>
+
+
+<span class="c1"># Shows the correct output</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/mbti-types&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+<div class="viewcode-block" id="get_mbti_types">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.get_mbti_types">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_mbti_types</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get information about all MBTI personality types.</span>
+<span class="sd">    </span>
+<span class="sd">    This endpoint provides a summary of all 16 MBTI personality types</span>
+<span class="sd">    and their associated music preferences.</span>
+<span class="sd">    </span>
+<span class="sd">    :return: JSON with MBTI types and their music preferences</span>
+<span class="sd">    :rtype: flask.Response</span>
+<span class="sd">    </span>
+<span class="sd">    :statuscode 200: MBTI types retrieved successfully</span>
+<span class="sd">    :statuscode 500: Server error</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Getting MBTI types info&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Dictionary of MBTI type names</span>
+        <span class="n">mbti_names</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;INTJ&quot;</span><span class="p">:</span> <span class="s2">&quot;The Architect&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;INTP&quot;</span><span class="p">:</span> <span class="s2">&quot;The Logician&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ENTJ&quot;</span><span class="p">:</span> <span class="s2">&quot;The Commander&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ENTP&quot;</span><span class="p">:</span> <span class="s2">&quot;The Debater&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;INFJ&quot;</span><span class="p">:</span> <span class="s2">&quot;The Advocate&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;INFP&quot;</span><span class="p">:</span> <span class="s2">&quot;The Mediator&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ENFJ&quot;</span><span class="p">:</span> <span class="s2">&quot;The Protagonist&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ENFP&quot;</span><span class="p">:</span> <span class="s2">&quot;The Campaigner&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ISTJ&quot;</span><span class="p">:</span> <span class="s2">&quot;The Logistician&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ISFJ&quot;</span><span class="p">:</span> <span class="s2">&quot;The Defender&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ESTJ&quot;</span><span class="p">:</span> <span class="s2">&quot;The Executive&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ESFJ&quot;</span><span class="p">:</span> <span class="s2">&quot;The Consul&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ISTP&quot;</span><span class="p">:</span> <span class="s2">&quot;The Virtuoso&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ISFP&quot;</span><span class="p">:</span> <span class="s2">&quot;The Adventurer&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ESTP&quot;</span><span class="p">:</span> <span class="s2">&quot;The Entrepreneur&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ESFP&quot;</span><span class="p">:</span> <span class="s2">&quot;The Entertainer&quot;</span>
+        <span class="p">}</span>
+        
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">get_db_connection</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">(</span><span class="n">dictionary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># Get preferred genres for each MBTI type</span>
+        <span class="n">mbti_types</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">mbti_type</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">mbti_names</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                SELECT genre</span>
+<span class="sd">                FROM mbti_genre_affinities</span>
+<span class="sd">                WHERE mbti_type = %s</span>
+<span class="sd">                ORDER BY affinity_score DESC</span>
+<span class="sd">                LIMIT 3</span>
+<span class="sd">                &quot;&quot;&quot;</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">mbti_type</span><span class="p">,)</span>
+            <span class="p">)</span>
+            <span class="n">genres</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;genre&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+            
+            <span class="n">mbti_types</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">mbti_type</span><span class="p">,</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                <span class="s2">&quot;preferred_genres&quot;</span><span class="p">:</span> <span class="n">genres</span>
+            <span class="p">})</span>
+        
+        <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;mbti_types&quot;</span><span class="p">:</span> <span class="n">mbti_types</span><span class="p">}),</span> <span class="mi">200</span>
+        
+    <span class="k">except</span> <span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error fetching MBTI types: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Failed to fetch MBTI types&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}),</span> <span class="mi">500</span></div>
+
+
+<span class="c1"># Shoes correct output</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="index">
+<a class="viewcode-back" href="../autoapi/app/index.html#app.index">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">index</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Root endpoint that returns basic API info.</span>
+<span class="sd">    </span>
+<span class="sd">    :return: JSON with API information</span>
+<span class="sd">    :rtype: flask.Response</span>
+<span class="sd">    </span>
+<span class="sd">    :statuscode 200: API info retrieved successfully</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Music Personality Quiz API&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Discover your music preferences based on MBTI personality type&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;endpoints&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;get_question&quot;</span><span class="p">:</span> <span class="s2">&quot;/api/quiz/questions/</span><span class="si">{question_number}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;process_answers&quot;</span><span class="p">:</span> <span class="s2">&quot;/api/quiz/process-answers&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;get_mbti_types&quot;</span><span class="p">:</span> <span class="s2">&quot;/api/mbti-types&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}),</span> <span class="mi">200</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">debug</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Music Quiz API</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../autoapi/index.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Kelci Atkinson.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

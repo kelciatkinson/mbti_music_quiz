@@ -1,0 +1,4 @@
+2025-04-25 20:54:11,203 - werkzeug - INFO -  * Detected change in '/Users/kelciatkinson/back_end_final/app.py', reloading
+2025-04-25 20:54:11,308 - werkzeug - INFO -  * Restarting with stat
+2025-04-25 20:54:11,595 - werkzeug - WARNING -  * Debugger is active!
+2025-04-25 20:54:11,604 - werkzeug - INFO -  * Debugger PIN: 978-458-346

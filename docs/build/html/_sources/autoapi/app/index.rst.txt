@@ -1,0 +1,159 @@
+app
+===
+
+.. py:module:: app
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   app.logger
+   app.DB_CONFIG
+   app.app
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   app.get_db_connection
+   app.generate_mbti_playlist
+   app.start_quiz
+   app.get_question
+   app.process_answers
+   app.get_playlist
+   app.get_mbti_types
+   app.index
+
+
+Module Contents
+---------------
+
+.. py:data:: logger
+
+.. py:data:: DB_CONFIG
+
+.. py:data:: app
+
+.. py:function:: get_db_connection()
+
+   Creates a connection to the MySQL database.
+
+   :return: MySQL database connection
+   :rtype: mysql.connector.connection.MySQLConnection
+
+
+.. py:function:: generate_mbti_playlist(cursor, mbti_type)
+
+   Generates a 10-song playist based on MBTI type with proportional distribution:
+   - 5 songs from primary genre (affinity=3)
+   - 3 songs from secondary genre (affinity=2)
+   - 2 songs from tertiary genre (affinity=1)
+
+   :param cursor: Database cursor
+   :param mbti_type: Four-letter MBTI type (e.g., "INFJ")
+   :return: List of song dictionaries
+
+
+.. py:function:: start_quiz()
+
+   Start a new quiz session.
+
+   This endpoint returns info about the available questions.
+
+   :return: JSON with quiz details
+   :rtype: flask.Response
+
+   :statuscode 201: Quiz info retrieved
+   :statuscode 500: Server error
+
+
+.. py:function:: get_question(question_number)
+
+   Get a specific question by its order number.
+
+   :param question_number: The question order number (1-based)
+   :type question_number: int
+   :return: JSON with question detais and answer options
+   :rtype: flask.Response
+
+   :statuscode 200: Question retrieved successfully
+   :statuscode 404: Question not found
+   :statuscode 500: Server error
+
+
+.. py:function:: process_answers()
+
+   Process all answers at once and get personality results and music recommendations.
+
+   This endpoint takes an array of answers, calculates the MBTI personality type,
+   and generates personalized music recommendations based on the results.
+
+   :return: JSON with personality profile and music recommendations
+   :rtype: flask.Response
+
+   :statuscode 200: Answers processed successfully with results
+   :statuscode 400: Invalid request format
+   :statuscode 500: Server error
+
+   **Example request**:
+
+   .. sourcecode:: http
+
+      POST /api/quiz/process-answers HTTP/1.1
+      Host: example.com
+      Accept: application/json
+      Content-Type: application/json
+
+      {
+        "answers": [
+          {"question_id": 1, "selected_option_id": 2},
+          {"question_id": 2, "selected_option_id": 4},
+          ...
+        ]
+      }
+
+
+.. py:function:: get_playlist(playlist_id)
+
+   Get a specific playlist with its songs.
+
+   This endpoint retrieves the details of a specific playlist.
+
+   :param playlist_id: The ID of the playlist
+   :type playlist_id: str
+   :return: JSON with playlist details and tracks
+   :rtype: flask.Response
+
+   :statuscode 200: Playlist retrieved successfully
+   :statuscode 404: Playlist not found
+   :statuscode 500: Server error
+
+
+.. py:function:: get_mbti_types()
+
+   Get information about all MBTI personality types.
+
+   This endpoint provides a summary of all 16 MBTI personality types
+   and their associated music preferences.
+
+   :return: JSON with MBTI types and their music preferences
+   :rtype: flask.Response
+
+   :statuscode 200: MBTI types retrieved successfully
+   :statuscode 500: Server error
+
+
+.. py:function:: index()
+
+   Root endpoint that returns basic API info.
+
+   :return: JSON with API information
+   :rtype: flask.Response
+
+   :statuscode 200: API info retrieved successfully
+
+

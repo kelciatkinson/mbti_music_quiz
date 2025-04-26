@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>app &#8212; Music Quiz API 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+    <script src="../../_static/documentation_options.js?v=2709fde1"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="conf" href="../conf/index.html" />
+    <link rel="prev" title="API Reference" href="../index.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-app">
+<span id="app"></span><h1>app<a class="headerlink" href="#module-app" title="Link to this heading">¶</a></h1>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading">¶</a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#app.logger" title="app.logger"><code class="xref py py-obj docutils literal notranslate"><span class="pre">logger</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#app.DB_CONFIG" title="app.DB_CONFIG"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DB_CONFIG</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#app.app" title="app.app"><code class="xref py py-obj docutils literal notranslate"><span class="pre">app</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#app.get_db_connection" title="app.get_db_connection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_db_connection</span></code></a>()</p></td>
+<td><p>Creates a connection to the MySQL database.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#app.generate_mbti_playlist" title="app.generate_mbti_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_mbti_playlist</span></code></a>(cursor, mbti_type)</p></td>
+<td><p>Generates a 10-song playist based on MBTI type with proportional distribution:</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#app.start_quiz" title="app.start_quiz"><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_quiz</span></code></a>()</p></td>
+<td><p>Start a new quiz session.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#app.get_question" title="app.get_question"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_question</span></code></a>(question_number)</p></td>
+<td><p>Get a specific question by its order number.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#app.process_answers" title="app.process_answers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">process_answers</span></code></a>()</p></td>
+<td><p>Process all answers at once and get personality results and music recommendations.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#app.get_playlist" title="app.get_playlist"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_playlist</span></code></a>(playlist_id)</p></td>
+<td><p>Get a specific playlist with its songs.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#app.get_mbti_types" title="app.get_mbti_types"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_mbti_types</span></code></a>()</p></td>
+<td><p>Get information about all MBTI personality types.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#app.index" title="app.index"><code class="xref py py-obj docutils literal notranslate"><span class="pre">index</span></code></a>()</p></td>
+<td><p>Root endpoint that returns basic API info.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="app.logger">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">logger</span></span><a class="reference internal" href="../../_modules/app.html#logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.logger" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="app.DB_CONFIG">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">DB_CONFIG</span></span><a class="reference internal" href="../../_modules/app.html#DB_CONFIG"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.DB_CONFIG" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="app.app">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">app</span></span><a class="reference internal" href="../../_modules/app.html#app"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.app" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.get_db_connection">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">get_db_connection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/app.html#get_db_connection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.get_db_connection" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a connection to the MySQL database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>MySQL database connection</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>mysql.connector.connection.MySQLConnection</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.generate_mbti_playlist">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">generate_mbti_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cursor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mbti_type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/app.html#generate_mbti_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.generate_mbti_playlist" title="Link to this definition">¶</a></dt>
+<dd><p>Generates a 10-song playist based on MBTI type with proportional distribution:
+- 5 songs from primary genre (affinity=3)
+- 3 songs from secondary genre (affinity=2)
+- 2 songs from tertiary genre (affinity=1)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cursor</strong> – Database cursor</p></li>
+<li><p><strong>mbti_type</strong> – Four-letter MBTI type (e.g., “INFJ”)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of song dictionaries</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.start_quiz">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">start_quiz</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/app.html#start_quiz"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.start_quiz" title="Link to this definition">¶</a></dt>
+<dd><p>Start a new quiz session.</p>
+<p>This endpoint returns info about the available questions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JSON with quiz details</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>flask.Response</p>
+</dd>
+<dt class="field-odd">Statuscode 201<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Quiz info retrieved</p>
+</dd>
+<dt class="field-even">Statuscode 500<span class="colon">:</span></dt>
+<dd class="field-even"><p>Server error</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.get_question">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">get_question</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">question_number</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/app.html#get_question"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.get_question" title="Link to this definition">¶</a></dt>
+<dd><p>Get a specific question by its order number.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>question_number</strong> (<em>int</em>) – The question order number (1-based)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>JSON with question detais and answer options</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>flask.Response</p>
+</dd>
+<dt class="field-even">Statuscode 200<span class="colon">:</span></dt>
+<dd class="field-even"><p>Question retrieved successfully</p>
+</dd>
+<dt class="field-odd">Statuscode 404<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Question not found</p>
+</dd>
+<dt class="field-even">Statuscode 500<span class="colon">:</span></dt>
+<dd class="field-even"><p>Server error</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.process_answers">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">process_answers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/app.html#process_answers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.process_answers" title="Link to this definition">¶</a></dt>
+<dd><p>Process all answers at once and get personality results and music recommendations.</p>
+<p>This endpoint takes an array of answers, calculates the MBTI personality type,
+and generates personalized music recommendations based on the results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JSON with personality profile and music recommendations</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>flask.Response</p>
+</dd>
+<dt class="field-odd">Statuscode 200<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Answers processed successfully with results</p>
+</dd>
+<dt class="field-even">Statuscode 400<span class="colon">:</span></dt>
+<dd class="field-even"><p>Invalid request format</p>
+</dd>
+<dt class="field-odd">Statuscode 500<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Server error</p>
+</dd>
+</dl>
+<p><strong>Example request</strong>:</p>
+<div class="highlight-http notranslate"><div class="highlight"><pre><span></span><span class="nf">POST</span> <span class="nn">/api/quiz/process-answers</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">example.com</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;answers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;question_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;selected_option_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;question_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;selected_option_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">},</span>
+<span class="w">    </span><span class="err">...</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.get_playlist">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">get_playlist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">playlist_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/app.html#get_playlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.get_playlist" title="Link to this definition">¶</a></dt>
+<dd><p>Get a specific playlist with its songs.</p>
+<p>This endpoint retrieves the details of a specific playlist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>playlist_id</strong> (<em>str</em>) – The ID of the playlist</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>JSON with playlist details and tracks</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>flask.Response</p>
+</dd>
+<dt class="field-even">Statuscode 200<span class="colon">:</span></dt>
+<dd class="field-even"><p>Playlist retrieved successfully</p>
+</dd>
+<dt class="field-odd">Statuscode 404<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Playlist not found</p>
+</dd>
+<dt class="field-even">Statuscode 500<span class="colon">:</span></dt>
+<dd class="field-even"><p>Server error</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.get_mbti_types">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">get_mbti_types</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/app.html#get_mbti_types"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.get_mbti_types" title="Link to this definition">¶</a></dt>
+<dd><p>Get information about all MBTI personality types.</p>
+<p>This endpoint provides a summary of all 16 MBTI personality types
+and their associated music preferences.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JSON with MBTI types and their music preferences</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>flask.Response</p>
+</dd>
+<dt class="field-odd">Statuscode 200<span class="colon">:</span></dt>
+<dd class="field-odd"><p>MBTI types retrieved successfully</p>
+</dd>
+<dt class="field-even">Statuscode 500<span class="colon">:</span></dt>
+<dd class="field-even"><p>Server error</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.index">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/app.html#index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.index" title="Link to this definition">¶</a></dt>
+<dd><p>Root endpoint that returns basic API info.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JSON with API information</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>flask.Response</p>
+</dd>
+<dt class="field-odd">Statuscode 200<span class="colon">:</span></dt>
+<dd class="field-odd"><p>API info retrieved successfully</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Music Quiz API</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">app</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../conf/index.html">conf</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">API Reference</a><ul>
+      <li>Previous: <a href="../index.html" title="previous chapter">API Reference</a></li>
+      <li>Next: <a href="../conf/index.html" title="next chapter">conf</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Kelci Atkinson.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/autoapi/app/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
